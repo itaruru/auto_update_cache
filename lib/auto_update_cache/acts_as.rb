@@ -9,16 +9,20 @@ module AutoUpdateCache
       def auto_update_cache(*keys)
         keys.uniq.each do |key|
           self.class_eval <<-EOS
-            after_save    :__auto_delete_cache__#{key}
+            after_create  :__auto_delete_cache__#{key}
+            after_update  :__auto_delete_cache__#{key}
             after_destroy :__auto_delete_cache__#{key}
 
             private
 
-            def __auto_delete_cache__#{key}
-              @_redis ||= begin
+            def __redis__
+              @__redis__ ||= begin
                 Rails.cache.instance_variable_get(:@data)
               end
-              @_redis.keys('auc/#{self.to_s.underscore}/#{key}*').each do |key|
+            end
+
+            def __auto_delete_cache__#{key}
+              __redis__.keys('auc/#{self.to_s.underscore}/#{key}*').each do |key|
                 Rails.cache.delete(key)
               end
             end
